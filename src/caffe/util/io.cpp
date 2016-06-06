@@ -303,59 +303,96 @@ void hdf5_save_nd_dataset<double>(
   CHECK_GE(status, 0) << "Failed to make double dataset " << dataset_name;
 }
 
+bool ReadBboxToDatum(const vector<int> offsets, const int length, 
+    const std::vector<std::vector<float> > bboxs, std::vector<int>* coor_bbox, int bbox_offset){
+    ///// for bbox
+    int bbox_num = bboxs.size();
+    std::vector<int> bbox_idx;
+
+    for(int i = 0; i< bbox_num; ++i){
+      bbox_idx.push_back(bboxs[i][0]);
+    }
+    vector<int>::iterator iter = unique(bbox_idx.begin(),bbox_idx.end());
+    bbox_idx.erase(iter,bbox_idx.end());
+    std::vector<int> frame_split;
+    if (bbox_num >= 2){
+      for(int i = 1; i < bboxs.size(); ++i){
+        frame_split.push_back(ceil(((bbox_idx[i] + bbox_idx[i - 1]) / 2)));
+      }
+    }
+    int count = 0;
+    for (int i = 0; i < offsets.size(); ++i){
+      int offset = offsets[i];
+      for (int file_id = 1; file_id < length+1; ++file_id){
+        int frame_idx = int(file_id + offset);
+        std::vector<int> frame_insert_bbox(frame_split);
+        frame_insert_bbox.push_back(frame_idx);
+        std::sort(frame_insert_bbox.begin(), frame_insert_bbox.end());
+        for(int j = 0; j < frame_insert_bbox.size(); ++j){
+          if (frame_insert_bbox[j] == frame_idx){
+            (*coor_bbox)[bbox_offset + count]= bbox_idx[j];
+            count++;
+            break;
+          }
+        }
+      }
+    }
+    return true;
+}
+
 bool ReadSegmentRGBToDatum(const string& filename, const int label,
     const vector<int> offsets, const int height, const int width, const int length, Datum* datum, bool is_color,
-    const char* name_pattern ){
-	cv::Mat cv_img;
-	string* datum_string;
-	char tmp[30];
-	int cv_read_flag = (is_color ? CV_LOAD_IMAGE_COLOR :
-	    CV_LOAD_IMAGE_GRAYSCALE);
-	for (int i = 0; i < offsets.size(); ++i){
-		int offset = offsets[i];
-		for (int file_id = 1; file_id < length+1; ++file_id){
-			sprintf(tmp, name_pattern, int(file_id+offset));
-			string filename_t = filename + "/" + tmp;
-			cv::Mat cv_img_origin = cv::imread(filename_t, cv_read_flag);
-			if (!cv_img_origin.data){
-				LOG(ERROR) << "Could not load file " << filename;
-				return false;
-			}
-			if (height > 0 && width > 0){
-				cv::resize(cv_img_origin, cv_img, cv::Size(width, height));
-			}else{
-				cv_img = cv_img_origin;
-			}
-			int num_channels = (is_color ? 3 : 1);
-			if (file_id==1 && i==0){
-				datum->set_channels(num_channels*length*offsets.size());
-				datum->set_height(cv_img.rows);
-				datum->set_width(cv_img.cols);
-				datum->set_label(label);
-				datum->clear_data();
-				datum->clear_float_data();
-				datum_string = datum->mutable_data();
-			}
-			if (is_color) {
-			    for (int c = 0; c < num_channels; ++c) {
-			      for (int h = 0; h < cv_img.rows; ++h) {
-			        for (int w = 0; w < cv_img.cols; ++w) {
-			          datum_string->push_back(
-			            static_cast<char>(cv_img.at<cv::Vec3b>(h, w)[c]));
-			        }
-			      }
-			    }
-			  } else {  // Faster than repeatedly testing is_color for each pixel w/i loop
-			    for (int h = 0; h < cv_img.rows; ++h) {
-			      for (int w = 0; w < cv_img.cols; ++w) {
-			        datum_string->push_back(
-			          static_cast<char>(cv_img.at<uchar>(h, w)));
-			        }
-			      }
-			  }
-		}
-	}
-	return true;
+    const char* name_pattern){
+  cv::Mat cv_img;
+  string* datum_string;
+  char tmp[30];
+  int cv_read_flag = (is_color ? CV_LOAD_IMAGE_COLOR :
+      CV_LOAD_IMAGE_GRAYSCALE);
+  for (int i = 0; i < offsets.size(); ++i){
+    int offset = offsets[i];
+    for (int file_id = 1; file_id < length+1; ++file_id){
+      sprintf(tmp, name_pattern, int(file_id+offset));
+      string filename_t = filename + "/" + tmp;
+      cv::Mat cv_img_origin = cv::imread(filename_t, cv_read_flag);
+      if (!cv_img_origin.data){
+        LOG(ERROR) << "Could not load file " << filename;
+        return false;
+      }
+      if (height > 0 && width > 0){
+        cv::resize(cv_img_origin, cv_img, cv::Size(width, height));
+      }else{
+        cv_img = cv_img_origin;
+      }
+      int num_channels = (is_color ? 3 : 1);
+      if (file_id==1 && i==0){
+        datum->set_channels(num_channels*length*offsets.size());
+        datum->set_height(cv_img.rows);
+        datum->set_width(cv_img.cols);
+        datum->set_label(label);
+        datum->clear_data();
+        datum->clear_float_data();
+        datum_string = datum->mutable_data();
+      }
+      if (is_color) {
+          for (int c = 0; c < num_channels; ++c) {
+            for (int h = 0; h < cv_img.rows; ++h) {
+              for (int w = 0; w < cv_img.cols; ++w) {
+                datum_string->push_back(
+                  static_cast<char>(cv_img.at<cv::Vec3b>(h, w)[c]));
+              }
+            }
+          }
+        } else {  // Faster than repeatedly testing is_color for each pixel w/i loop
+          for (int h = 0; h < cv_img.rows; ++h) {
+            for (int w = 0; w < cv_img.cols; ++w) {
+              datum_string->push_back(
+                static_cast<char>(cv_img.at<uchar>(h, w)));
+              }
+            }
+        }
+    }
+  }
+  return true;
 }
 
 bool ReadSegmentFlowToDatum(const string& filename, const int label,
