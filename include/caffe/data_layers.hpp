@@ -321,18 +321,27 @@ public:
 	virtual ~VideoDataLayer();
 	virtual void DataLayerSetUp(const vector<Blob<Dtype>*>& bottom,
 			const vector<Blob<Dtype>*>& top);
+	virtual void Forward_cpu(const vector<Blob<Dtype>*>& bottom, 
+			const vector<Blob<Dtype>*>& top);
+	virtual void Forward_gpu(const vector<Blob<Dtype>*>& bottom,
+		const vector<Blob<Dtype>*>& top);
 
 	virtual inline const char* type() const { return "VideoData"; }
 	virtual inline int ExactNumBottomBlobs() const { return 0; }
-	virtual inline int ExactNumTopBlobs() const { return 2; }
+	virtual inline int ExactNumTopBlobs() const { return 3; }
+
 
 protected:
 	shared_ptr<Caffe::RNG> prefetch_rng_;
 	shared_ptr<Caffe::RNG> prefetch_rng_2_;
 	shared_ptr<Caffe::RNG> prefetch_rng_1_;
 	shared_ptr<Caffe::RNG> frame_prefetch_rng_;
+	/////// bounding box
+	Blob<Dtype> prefetch_bbox_;
+	///////
 	virtual void ShuffleVideos();
 	virtual void InternalThreadEntry();
+
 
 #ifdef USE_MPI
 	inline virtual void advance_cursor(){
@@ -352,6 +361,8 @@ protected:
 	vector<int> lines_duration_;
 	int lines_id_;
 	string name_pattern_;
+	// for attention pooling
+	vector<std::pair<std::string, std::vector<std::vector<float> > > > bbox_pair_;
 };
 
 
