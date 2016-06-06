@@ -29,8 +29,9 @@ void AttentionPoolingLayer<Dtype>::Reshape(const vector<Blob<Dtype>*>& bottom,
 		channels_ = bottom[0]->channels();
 		height_ = bottom[0]->height();
 		width_ = bottom[0]->width();
-		top[0]->Reshape(bottom[0]->num(), channels_, height_,
-		width_);
+		top[0]->Reshape(bottom[0]->num(), channels_, height_, width_);
+    tmp_rois_data_.Reshape(num_ * height_ * width_, 1, 1, 1);
+
 }
 
 template <typename Dtype>
@@ -57,8 +58,8 @@ void AttentionPoolingLayer<Dtype>::Forward_cpu(const vector<Blob<Dtype>*>& botto
 		int roi_start_y_ = static_cast<int>(floor(bottom_rois[2 + n * roi_channel_] * spatial_scale_));
 		int roi_end_x_ = static_cast<int>(ceil(bottom_rois[3 + n * roi_channel_] * spatial_scale_));
 		int roi_end_y_ = static_cast<int>(ceil(bottom_rois[4 + n * roi_channel_] * spatial_scale_));
-		int roi_start_x = min(max(roi_start_x_, 0), height_ - 1);
-		int roi_start_y = min(max(roi_start_y_, 0), width_ - 1);
+		int roi_start_x = min(max(roi_start_x_, 0), width_ - 1);
+		int roi_start_y = min(max(roi_start_y_, 0), height_ - 1);
 		int roi_end_x = min(max(roi_end_x_, 0), width_ - 1);
 		int roi_end_y = min(max(roi_end_y_, 0), height_ - 1);
 
@@ -123,8 +124,8 @@ void AttentionPoolingLayer<Dtype>::Backward_cpu(const vector<Blob<Dtype>*>& top,
 		int roi_start_y_ = static_cast<int>(floor(bottom_rois[2 + n * roi_channel_] * spatial_scale_));
 		int roi_end_x_ = static_cast<int>(ceil(bottom_rois[3 + n * roi_channel_] * spatial_scale_));
 		int roi_end_y_ = static_cast<int>(ceil(bottom_rois[4 + n * roi_channel_] * spatial_scale_));
-		int roi_start_x = min(max(roi_start_x_, 0), height_ - 1);
-		int roi_start_y = min(max(roi_start_y_, 0), width_ - 1);
+		int roi_start_x = min(max(roi_start_x_, 0), width_ - 1);
+		int roi_start_y = min(max(roi_start_y_, 0), height_ - 1);
 		int roi_end_x = min(max(roi_end_x_, 0), width_ - 1);
 		int roi_end_y = min(max(roi_end_y_, 0), height_ - 1);
 
