@@ -597,6 +597,35 @@ class SPPLayer : public Layer<Dtype> {
         Blob<int> max_idx_;
     };
 
+template <typename Dtype>
+class AttentionPoolingLayer : public Layer<Dtype> {
+ public:
+  explicit AttentionPoolingLayer(const LayerParameter& param)
+      : Layer<Dtype>(param) {
+        AttentionPoolingParameter attention_pooling_param = this->layer_param_.attention_pooling_param();
+        scale_ = attention_pooling_param.scale();}
+  virtual void LayerSetUp(const vector<Blob<Dtype>*>& bottom,
+      const vector<Blob<Dtype>*>& top);
+  virtual void Reshape(const vector<Blob<Dtype>*>& bottom,
+      const vector<Blob<Dtype>*>& top);
+
+  virtual inline const char* type() const { return "AttentionPooling"; }
+  virtual inline int ExactNumBottomBlobs() const { return 2; }
+  virtual inline int MinTopBlobs() const { return 1; }
+  virtual inline int MaxTopBlobs() const { return 1; }
+
+ protected:
+  virtual void Forward_cpu(const vector<Blob<Dtype>*>& bottom,
+      const vector<Blob<Dtype>*>& top);
+  virtual void Backward_cpu(const vector<Blob<Dtype>*>& top,
+      const vector<bool>& propagate_down, const vector<Blob<Dtype>*>& bottom);
+
+  Dtype scale_;
+  int roi_channel_;
+  int num_;
+  int channels_;
+  int height_, width_;
+};
 
 }  // namespace caffe
 
