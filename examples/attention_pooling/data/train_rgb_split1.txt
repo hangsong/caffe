@@ -1,0 +1,2 @@
+examples/attention_pooling/data/frame/id1 9 2
+examples/attention_pooling/data/frame/id2 9 3
